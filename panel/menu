@@ -1,0 +1,153 @@
+#!/bin/bash
+
+PORT_FILE="/opt/dtunnelmod/port"
+
+# Funcion para verificar si un puerto está en uso
+is_port_in_use() {
+    local port=$1
+    if lsof -i :$port > /dev/null 2>&1; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+# Funcion para inciar el panel
+start_dtunnel_painel() {
+    local port=$1
+
+    if is_port_in_use $port; then
+        echo "El puerto $port ya está en uso."
+        return
+    fi
+    
+    cd /opt/dtunnelmod/
+
+    # cargando nvm en bash
+    [ -s "/root/.nvm/nvm.sh" ] && \. "/root/.nvm/nvm.sh" 
+
+    # Definiendo variables para ejecución del panel
+    rm -rf /opt/dtunnelmod/.env
+    echo "PORT=$port" > /opt/dtunnelmod/.env
+    echo "NODE_ENV=\"production\"" >> /opt/dtunnelmod/.env
+    echo "DATABASE_URL=\"file:/opt/dtunnelmod/prisma/database.db\"" >> /opt/dtunnelmod/.env
+    token1=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
+    token2=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
+    token3=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
+    echo "CSRF_SECRET=\"$token1\"" >> /opt/dtunnelmod/.env
+    echo "JWT_SECRET_KEY=\"$token2\"" >> /opt/dtunnelmod/.env
+    echo "JWT_SECRET_REFRESH=\"$token3\"" >> /opt/dtunnelmod/.env
+    echo "ENCRYPT_FILES=\"7223fd56-e21d-4191-8867-f3c67601122a\"" >> /opt/dtunnelmod/.env
+
+    npm run build
+    npx prisma migrate dev
+
+
+    # Creando servicio del panel
+    local command="/root/.nvm/versions/node/v18.20.4/bin/npm --prefix /opt/dtunnelmod/ run start"
+    local service_file_path="/etc/systemd/system/dtunnelpainel.service"
+    local service_file_content="[Unit]
+Description=DtunnelPainel
+After=network.target
+
+[Service]
+LimitNOFILE=infinity
+LimitNPROC=infinity
+LimitMEMLOCK=infinity
+LimitSTACK=infinity
+LimitCORE=infinity
+LimitAS=infinity
+LimitRSS=infinity
+LimitCPU=infinity
+LimitFSIZE=infinity
+
+Environment=NVM_DIR=/root/.nvm
+Environment=PATH=/root/.nvm/versions/node/v18.20.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+Type=simple
+ExecStart=${command}
+Restart=always
+
+[Service]
+WorkingDirectory=/opt/dtunnelmod/
+
+[Install]
+WantedBy=multi-user.target"
+
+    echo "$service_file_content" | sudo tee "$service_file_path" > /dev/null
+    sudo systemctl daemon-reload
+    sudo systemctl enable "dtunnelpainel.service"
+    sudo systemctl start "dtunnelpainel.service"
+
+    # Guardar el puerto en el archivo
+    echo $port >> "$PORT_FILE"
+    echo "Iniciado con exito"
+}
+
+# Funcion para detener el panel
+stop_dtunnel_painel() {
+    sudo systemctl disable "dtunnelpainel.service"
+    sudo systemctl stop "dtunnelpainel.service"
+    sudo rm -f "/etc/systemd/system/dtunnelpainel.service"
+    sudo systemctl daemon-reload
+
+    sudo rm -f "$PORT_FILE"
+    echo "Detenido con exito"
+}
+
+# Funcion para Exhibir el menu formateado
+show_menu() {
+    clear
+    echo "------------------------------------------------"
+    printf "|                 %-29s|\n" "Dtunnel Painel"
+    echo "------------------------------------------------"
+
+    STATUS=0
+    # Verifica se há portas ativas
+    if [ ! -s "$PORT_FILE" ]; then
+        printf "| acesso: %-37s|\n" "inativo"
+    else
+        PORT=$(cat $PORT_FILE)
+        STATUS=1
+        printf "| acesso: %-37s|\n" "http://$(wget -qO- ipinfo.io/ip):$PORT"
+    fi
+
+    echo "------------------------------------------------"
+    if [ "$STATUS" -eq 0 ]; then 
+        printf "| %-45s|\n" "1 - Activar Panel"
+    else
+        printf "| %-45s|\n" "1 - Detener Panel"
+    fi
+    printf "| %-45s|\n" "0 - Volver al menu"
+    echo "------------------------------------------------"
+    echo
+    read -p " --> Seleccione una opcion: " option
+
+    case $option in
+        1)
+            if [ "$STATUS" -eq 0 ]; then 
+                read -p "Digite a porta: " port
+                while ! [[ $port =~ ^[0-9]+$ ]]; do
+                    echo "Digite un puerto válido."
+                    read -p "Digite el puerto: " port
+                done
+                start_dtunnel_painel $port
+                read -p "> Panel iniciado con exito. Presione cualquier tecla para volver al menu." dummy
+            else
+                stop_dtunnel_painel
+                read -p "> Panel desactivado con exito. Presione cualquier tecla para volver al menu." dummy
+            fi
+            ;;
+        0)
+            exit 0
+            ;;
+        *)
+            echo "Opcion invalida. Presione cualquier tecla para volver al menu."
+            read -n 1 dummy
+            ;;
+    esac
+}
+
+# Loop del menu
+while true; do
+    show_menu
+done
