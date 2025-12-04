@@ -6,7 +6,7 @@ upstream backend {
 }
 
 server {
-    server_name dtunnelmod.com;
+    server_name panel.interking.online;
 
     access_log /var/log/nginx/dtunnelmod.log;
     error_log /var/log/nginx/dtunnelmod-error.log;
@@ -41,16 +41,11 @@ server {
     ssl_certificate_key /root/dtunnel/nginx/privkey.pem;
     include /etc/letsencrypt/options-ssl-nginx.conf;
     ssl_dhparam /etc/letsencrypt/ssl-dhparams.pem;
-
 }
 
 server {
-    
-    if ($host = dtunnelmod.com) {
-        return 301 https://$host$request_uri;
-    }
-
     listen 80;
-    server_name dtunnelmod.com;
-    return 404;
+    server_name panel.interking.online;
+
+    return 301 https://panel.interking.online$request_uri;
 }

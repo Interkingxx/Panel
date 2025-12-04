@@ -79,27 +79,27 @@ else
     nvm install 18 >/dev/null 2>&1 || error_exit "Falla al instalar Node.js"
     increment_step
 
-    show_progress "Clonando KING•VPN Panel..."
-    git clone --branch "main" https://github.com/InterKingxx/Panel.git /root/KINGVPNRepo >/dev/null 2>&1 || error_exit "Falla al clonar el panel"
+    show_progress "Clonando KING•VPN..."
+    git clone --branch "main" https://github.com/InterKingxx/Panel.git /root/KINGVPN >/dev/null 2>&1 || error_exit "Falla al clonar el panel"
     
-    mv /root/KINGVPNRepo/menu /opt/kingvpn/menu || error_exit "Falla al mover menu"
-    cd /root/KINGVPNRepo/DTunnel/ || error_exit "Falla al entrar al directorio DTunnel"
+    mv /root/KINGVPN/menu /opt/kingvpn/menu || error_exit "Falla al mover menu"
+    cd /root/KINGVPN/KINGVPN/ || error_exit "Falla al entrar al directorio KINGVPN"
 
     npm install -g typescript >/dev/null 2>&1 || error_exit "Falla al instalar TypeScript"
     npm install --force >/dev/null 2>&1 || error_exit "Falla al instalar dependencias"
 
-    mv /root/KINGVPNRepo/DTunnel/* /opt/kingvpn/ || error_exit "Falla al mover archivos del panel"
+    mv /root/KINGVPNRepo/KINGVPN/* /opt/kingvpn/ || error_exit "Falla al mover archivos del panel"
     increment_step
 
     show_progress "Configurando permisos..."
     chmod +x /opt/kingvpn/menu || error_exit "Falla al configurar permisos"
-    ln -sf /opt/kingvpn/menu /usr/local/bin/kingvpnpainel || error_exit "Falla al crear link simbólico"
+    ln -sf /opt/kingvpn/menu /usr/local/bin/kingvpn || error_exit "Falla al crear link simbólico"
     increment_step
 
     show_progress "Creando servicio systemd..."
-    cat >/etc/systemd/system/kingvpnpainel.service <<EOL
+    cat >/etc/systemd/system/kingvpn.service <<EOL
 [Unit]
-Description=KING•VPN Panel
+Description=KING•VPN
 After=network.target
 
 [Service]
@@ -118,8 +118,8 @@ EOL
     increment_step
 
     show_progress "Limpiando temporales..."
-    rm -rf /root/KINGVPNRepo || error_exit "Falla al limpiar directorio temporal"
+    rm -rf /root/KINGVPN || error_exit "Falla al limpiar directorio temporal"
     increment_step
 
-    echo "Instalación completa. Ejecuta 'kingvpnpainel' para abrir el menú."
+    echo "Instalación completa. Ejecuta 'KINGVPN' para abrir el menú."
 fi

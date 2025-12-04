@@ -1,6 +1,6 @@
 #!/bin/bash
 
-PORT_FILE="/opt/dtunnelmod/port"
+PORT_FILE="/opt/KINGVPN/port"
 
 # Funcion para verificar si un puerto está en uso
 is_port_in_use() {
@@ -13,7 +13,7 @@ is_port_in_use() {
 }
 
 # Funcion para inciar el panel
-start_dtunnel_painel() {
+start_KINGVPN() {
     local port=$1
 
     if is_port_in_use $port; then
@@ -27,27 +27,27 @@ start_dtunnel_painel() {
     [ -s "/root/.nvm/nvm.sh" ] && \. "/root/.nvm/nvm.sh" 
 
     # Definiendo variables para ejecución del panel
-    rm -rf /opt/dtunnelmod/.env
-    echo "PORT=$port" > /opt/dtunnelmod/.env
-    echo "NODE_ENV=\"production\"" >> /opt/dtunnelmod/.env
-    echo "DATABASE_URL=\"file:/opt/dtunnelmod/prisma/database.db\"" >> /opt/dtunnelmod/.env
+    rm -rf /opt/KINGVPN/.env
+    echo "PORT=$port" > /opt/KINGVPN/.env
+    echo "NODE_ENV=\"production\"" >> /opt/KINGVPN/.env
+    echo "DATABASE_URL=\"file:/opt/KINGVPN/prisma/database.db\"" >> /opt/KINGVPN/.env
     token1=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
     token2=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
     token3=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
     echo "CSRF_SECRET=\"$token1\"" >> /opt/dtunnelmod/.env
     echo "JWT_SECRET_KEY=\"$token2\"" >> /opt/dtunnelmod/.env
     echo "JWT_SECRET_REFRESH=\"$token3\"" >> /opt/dtunnelmod/.env
-    echo "ENCRYPT_FILES=\"7223fd56-e21d-4191-8867-f3c67601122a\"" >> /opt/dtunnelmod/.env
+    echo "ENCRYPT_FILES=\"7223fd56-e21d-4191-8867-f3c67601122a\"" >> /opt/KINGVPN/.env
 
     npm run build
     npx prisma migrate dev
 
 
     # Creando servicio del panel
-    local command="/root/.nvm/versions/node/v18.20.4/bin/npm --prefix /opt/dtunnelmod/ run start"
-    local service_file_path="/etc/systemd/system/dtunnelpainel.service"
+    local command="/root/.nvm/versions/node/v18.20.4/bin/npm --prefix /opt/KINGVPN/ run start"
+    local service_file_path="/etc/systemd/system/KINGVPN.service"
     local service_file_content="[Unit]
-Description=DtunnelPainel
+Description=KINGVPN
 After=network.target
 
 [Service]
@@ -68,15 +68,15 @@ ExecStart=${command}
 Restart=always
 
 [Service]
-WorkingDirectory=/opt/dtunnelmod/
+WorkingDirectory=/opt/KINGVPN/
 
 [Install]
 WantedBy=multi-user.target"
 
     echo "$service_file_content" | sudo tee "$service_file_path" > /dev/null
     sudo systemctl daemon-reload
-    sudo systemctl enable "dtunnelpainel.service"
-    sudo systemctl start "dtunnelpainel.service"
+    sudo systemctl enable "KINGVPN.service"
+    sudo systemctl start "KINGVPN.service"
 
     # Guardar el puerto en el archivo
     echo $port >> "$PORT_FILE"
@@ -84,10 +84,10 @@ WantedBy=multi-user.target"
 }
 
 # Funcion para detener el panel
-stop_dtunnel_painel() {
-    sudo systemctl disable "dtunnelpainel.service"
-    sudo systemctl stop "dtunnelpainel.service"
-    sudo rm -f "/etc/systemd/system/dtunnelpainel.service"
+stop_KINGVPN() {
+    sudo systemctl disable "KINGVPN.service"
+    sudo systemctl stop "KINGVPN.service"
+    sudo rm -f "/etc/systemd/system/KINGVPN.service"
     sudo systemctl daemon-reload
 
     sudo rm -f "$PORT_FILE"
@@ -98,11 +98,11 @@ stop_dtunnel_painel() {
 show_menu() {
     clear
     echo "------------------------------------------------"
-    printf "|                 %-29s|\n" "Dtunnel Painel"
+    printf "|                 %-29s|\n" "KINGVPN"
     echo "------------------------------------------------"
 
     STATUS=0
-    # Verifica se há portas ativas
+    # Verificar si hay puertos activos
     if [ ! -s "$PORT_FILE" ]; then
         printf "| acesso: %-37s|\n" "inativo"
     else
@@ -130,10 +130,10 @@ show_menu() {
                     echo "Digite un puerto válido."
                     read -p "Digite el puerto: " port
                 done
-                start_dtunnel_painel $port
+                start_KINGVPN $port
                 read -p "> Panel iniciado con exito. Presione cualquier tecla para volver al menu." dummy
             else
-                stop_dtunnel_painel
+                stop_KINGVPN
                 read -p "> Panel desactivado con exito. Presione cualquier tecla para volver al menu." dummy
             fi
             ;;
