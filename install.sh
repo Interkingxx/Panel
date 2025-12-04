@@ -88,7 +88,7 @@ else
     npm install -g typescript >/dev/null 2>&1 || error_exit "Falla al instalar TypeScript"
     npm install --force >/dev/null 2>&1 || error_exit "Falla al instalar dependencias"
 
-    mv /root/KINGVPNRepo/KINGVPN/* /opt/kingvpn/ || error_exit "Falla al mover archivos del panel"
+    mv /root/KINGVPN/KINGVPN/* /opt/kingvpn/ || error_exit "Falla al mover archivos del panel"
     increment_step
 
     show_progress "Configurando permisos..."
