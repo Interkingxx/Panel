@@ -1,10 +1,10 @@
 const APP_BACKGROUND_TYPE_OPTIONS = [
   {
-    label: 'Imagem',
+    label: 'Imagen',
     value: 'IMAGE',
   },
   {
-    label: 'Cor',
+    label: 'Color',
     value: 'COLOR',
   },
 ];
@@ -15,15 +15,15 @@ const APP_MESSAGE_TYPE_OPTIONS = [
     value: 'ALERT',
   },
   {
-    label: 'Informação',
+    label: 'Informacion',
     value: 'INFO',
   },
   {
-    label: 'Boas vindas',
+    label: 'Bien venida',
     value: 'WELCOME',
   },
   {
-    label: 'Sem mensagem',
+    label: 'Sin mensaje',
     value: 'NONE',
   },
 ];

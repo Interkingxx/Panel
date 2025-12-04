@@ -9,25 +9,27 @@ const paramsSchema = z.object({
 });
 
 export default {
-  url: '/category/:id',
+  url: '/app_layout/delete/:id',
   method: 'DELETE',
   onRequest: [Authentication.user],
   handler: async (req: FastifyRequest, reply: FastifyReply) => {
     const params = paramsSchema.parse(req.params);
-    const id = Number(params.id);
 
-    const category = await SafeCallback(() =>
-      prisma.category.deleteMany({
+    const id = parseInt(params.id);
+
+    const deleteAppLayout = await SafeCallback(() =>
+      prisma.appLayout.delete({
         where: {
           id,
+          is_active: false,
           user_id: req.user.id,
         },
       })
     );
 
-    if (!category) {
+    if (!deleteAppLayout) {
       reply.status(400);
-      throw new Error('Não foi possível deletar categoria');
+      throw new Error('No fue posibel apagar layout');
     }
 
     reply.status(204).send();

@@ -21,7 +21,7 @@ export default {
       });
 
       if (!getAppLayoutActive) {
-        throw new Error('Não foi possível obter layout');
+        throw new Error('No fue posible obtener su layout');
       }
 
       app_layout_id = getAppLayoutActive.id;

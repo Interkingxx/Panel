@@ -2,7 +2,6 @@ import { z } from 'zod';
 import prisma from '../../../config/prisma-client';
 import SafeCallback from '../../../utils/safe-callback';
 import Authentication from '../../../middlewares/authentication';
-import { categorySchema } from './zod-schema';
 import { FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
 
 const paramsSchema = z.object({
@@ -11,34 +10,26 @@ const paramsSchema = z.object({
 
 export default {
   url: '/category/:id',
-  method: 'PUT',
+  method: 'DELETE',
   onRequest: [Authentication.user],
   handler: async (req: FastifyRequest, reply: FastifyReply) => {
     const params = paramsSchema.parse(req.params);
-
-    const id = parseInt(params.id);
-    const { name, color, status, sorter } = categorySchema.parse(req.body);
+    const id = Number(params.id);
 
     const category = await SafeCallback(() =>
-      prisma.category.update({
+      prisma.category.deleteMany({
         where: {
           id,
           user_id: req.user.id,
-        },
-        data: {
-          name,
-          color: color.toUpperCase(),
-          status,
-          sorter: parseInt(String(sorter)),
         },
       })
     );
 
     if (!category) {
       reply.status(400);
-      throw new Error('Não foi possível editar essa categoria');
+      throw new Error('No fue posible eliminar categoria');
     }
 
-    reply.send({ status: 200 });
+    reply.status(204).send();
   },
 } as RouteOptions;

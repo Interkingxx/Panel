@@ -104,7 +104,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/kingvpn/menu
+ExecStart=/opt/menu/menu
 Restart=always
 User=root
 
@@ -121,5 +121,5 @@ EOL
     rm -rf /root/KINGVPN || error_exit "Falla al limpiar directorio temporal"
     increment_step
 
-    echo "Instalación completa. Ejecuta 'KINGVPN' para abrir el menú."
+    echo "Instalación completa. Ejecuta 'menu' para abrir el menú."
 fi

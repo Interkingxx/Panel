@@ -2,6 +2,7 @@ import { z } from 'zod';
 import prisma from '../../../config/prisma-client';
 import SafeCallback from '../../../utils/safe-callback';
 import Authentication from '../../../middlewares/authentication';
+import { categorySchema } from './zod-schema';
 import { FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
 
 const paramsSchema = z.object({
@@ -9,29 +10,35 @@ const paramsSchema = z.object({
 });
 
 export default {
-  url: '/app_layout/delete/:id',
-  method: 'DELETE',
+  url: '/category/:id',
+  method: 'PUT',
   onRequest: [Authentication.user],
   handler: async (req: FastifyRequest, reply: FastifyReply) => {
     const params = paramsSchema.parse(req.params);
 
     const id = parseInt(params.id);
+    const { name, color, status, sorter } = categorySchema.parse(req.body);
 
-    const deleteAppLayout = await SafeCallback(() =>
-      prisma.appLayout.delete({
+    const category = await SafeCallback(() =>
+      prisma.category.update({
         where: {
           id,
-          is_active: false,
           user_id: req.user.id,
+        },
+        data: {
+          name,
+          color: color.toUpperCase(),
+          status,
+          sorter: parseInt(String(sorter)),
         },
       })
     );
 
-    if (!deleteAppLayout) {
+    if (!category) {
       reply.status(400);
-      throw new Error('Não foi possível apagar layout');
+      throw new Error('No fue posible editar esa categoria');
     }
 
-    reply.status(204).send();
+    reply.send({ status: 200 });
   },
 } as RouteOptions;

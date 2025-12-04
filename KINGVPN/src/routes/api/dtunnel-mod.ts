@@ -5,13 +5,15 @@ import GetAppConfig from './get-app-config';
 import GetAppLayout from './get-app-layout';
 import { FastifyReply, FastifyRequest, RouteOptions } from 'fastify';
 
+// Schema de headers adaptado a KINGVPN
 const headerSchema = z.object({
   password: z.string().optional(),
-  'dtunnel-token': z.string(),
-  'dtunnel-update': z.enum(['app_config', 'app_layout', 'app_text']),
-  'user-agent': z.literal('DTunnelMod (@DTunnelMod, @DTunnelModGroup, @LightXVD)'),
+  'kingvpn-token': z.string(), //  kingvpn-token
+  'kingvpn-update': z.enum(['app_config', 'app_layout', 'app_text']), //  kingvpn-update
+  'user-agent': z.literal('KINGVPN (@KINGVPN, @KINGVPSGroup)'), // Kingvpn config
 });
 
+// Handlers sin cambios de lógica, solo nombres
 const handler = {
   app_text: GetAppText,
   app_config: GetAppConfig,
@@ -19,19 +21,20 @@ const handler = {
 };
 
 export default {
-  url: '/api/dtunnelmod',
+  url: '/api/kingvpn', // confi de /api/kingvpn
   method: 'GET',
   handler: async (req: FastifyRequest, reply: FastifyReply) => {
-    const password = 'DTunnelModSecret-API-9c69a0b72b442ccac3e6aaaa7630d12f2b351fe395e9fe667efa0907cde90da5';
+    // Key global, puedes reemplazarla si querés
+    const password = 'KINGVPNSecret-API-1234567890abcdef';
 
     const headers = headerSchema.safeParse(req.headers);
     if (headers && !headers.success) return reply.send();
 
-    const user_id = headers.data['dtunnel-token'];
-    const response = await handler[headers.data['dtunnel-update']](user_id);
+    const user_id = headers.data['kingvpn-token'];
+    const response = await handler[headers.data['kingvpn-update']](user_id);
 
     if (headers.data.password == password) {
-      if (['app_config', 'app_layout'].includes(headers.data['dtunnel-update'])) {
+      if (['app_config', 'app_layout'].includes(headers.data['kingvpn-update'])) {
         return reply.send(response.map((data: any) => JSON.parse(data)));
       }
       return reply.send(response);
