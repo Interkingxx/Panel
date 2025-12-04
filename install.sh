@@ -113,8 +113,8 @@ WantedBy=multi-user.target
 EOL
 
     systemctl daemon-reload
-    systemctl enable kingvpnpainel
-    systemctl start kingvpnpainel
+    systemctl enable kingvpn
+    systemctl start kingvpn
     increment_step
 
     show_progress "Limpiando temporales..."
