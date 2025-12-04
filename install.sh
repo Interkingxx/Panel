@@ -1,8 +1,9 @@
 #!/bin/bash
-# KING•VPN Installer
+# KING•VPN Installer - Adaptado para /root/KINGVPN
 
 TOTAL_STEPS=8
 CURRENT_STEP=0
+INSTALL_DIR="/root/KINGVPN"
 
 show_progress() {
     PERCENT=$((CURRENT_STEP * 100 / TOTAL_STEPS))
@@ -10,8 +11,8 @@ show_progress() {
 }
 
 error_exit() {
-    echo -e "\nErro: $1"
-    exit 0
+    echo -e "\nError: $1"
+    exit 1
 }
 
 increment_step() {
@@ -69,8 +70,8 @@ else
     increment_step
 
     show_progress "Preparando carpeta de instalación..."
-    rm -rf /opt/kingvpn
-    mkdir -p /opt/kingvpn || error_exit "Falla al crear directorio"
+    rm -rf "$INSTALL_DIR"
+    mkdir -p "$INSTALL_DIR" || error_exit "Falla al crear directorio"
     increment_step
 
     show_progress "Instalando Node.js 18..."
@@ -80,20 +81,22 @@ else
     increment_step
 
     show_progress "Clonando KING•VPN..."
-    git clone --branch "main" https://github.com/InterKingxx/Panel.git /root/KINGVPN >/dev/null 2>&1 || error_exit "Falla al clonar el panel"
-    
-    mv /root/KINGVPN/menu /opt/kingvpn/menu || error_exit "Falla al mover menu"
-    cd /root/KINGVPN/KINGVPN/ || error_exit "Falla al entrar al directorio KINGVPN"
+    git clone --branch "main" https://github.com/InterKingxx/Panel.git "$INSTALL_DIR/temp" >/dev/null 2>&1 || error_exit "Falla al clonar el panel"
+
+    # mover archivos correctamente
+    mv "$INSTALL_DIR/temp/menu" "$INSTALL_DIR/menu" || error_exit "Falla al mover menu"
+    mv "$INSTALL_DIR/temp/KINGVPN/"* "$INSTALL_DIR/" || error_exit "Falla al mover archivos del panel"
+    rm -rf "$INSTALL_DIR/temp"
+
+    cd "$INSTALL_DIR" || error_exit "Falla al entrar al directorio KINGVPN"
 
     npm install -g typescript >/dev/null 2>&1 || error_exit "Falla al instalar TypeScript"
     npm install --force >/dev/null 2>&1 || error_exit "Falla al instalar dependencias"
-
-    mv /root/KINGVPN/KINGVPN/* /opt/kingvpn/ || error_exit "Falla al mover archivos del panel"
     increment_step
 
     show_progress "Configurando permisos..."
-    chmod +x /opt/kingvpn/menu || error_exit "Falla al configurar permisos"
-    ln -sf /opt/kingvpn/menu /usr/local/bin/kingvpn || error_exit "Falla al crear link simbólico"
+    chmod +x "$INSTALL_DIR/menu" || error_exit "Falla al configurar permisos"
+    ln -sf "$INSTALL_DIR/menu" /usr/local/bin/kingvpn || error_exit "Falla al crear link simbólico"
     increment_step
 
     show_progress "Creando servicio systemd..."
@@ -104,7 +107,7 @@ After=network.target
 
 [Service]
 Type=simple
-ExecStart=/opt/menu/menu
+ExecStart=$INSTALL_DIR/menu
 Restart=always
 User=root
 
@@ -117,9 +120,5 @@ EOL
     systemctl start kingvpn
     increment_step
 
-    show_progress "Limpiando temporales..."
-    rm -rf /root/KINGVPN || error_exit "Falla al limpiar directorio temporal"
-    increment_step
-
-    echo "Instalación completa. Ejecuta 'menu' para abrir el menú."
+    show_progress "Instalación completa. Ejecuta 'kingvpn' para abrir el menú."
 fi
