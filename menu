@@ -1,18 +1,15 @@
 #!/bin/bash
 
-PORT_FILE="/opt/KINGVPN/port"
+DIR="/opt/kingvpn"
+ENV="$DIR/.env"
+PORT_FILE="$DIR/port"
 
-# Funcion para verificar si un puerto está en uso
+# Verificar si un puerto está en uso
 is_port_in_use() {
-    local port=$1
-    if lsof -i :$port > /dev/null 2>&1; then
-        return 0
-    else
-        return 1
-    fi
+    lsof -i :$1 >/dev/null 2>&1
 }
 
-# Funcion para inciar el panel
+# Iniciar panel
 start_KINGVPN() {
     local port=$1
 
@@ -20,134 +17,115 @@ start_KINGVPN() {
         echo "El puerto $port ya está en uso."
         return
     fi
-    
-    cd /opt/dtunnelmod/
 
-    # cargando nvm en bash
-    [ -s "/root/.nvm/nvm.sh" ] && \. "/root/.nvm/nvm.sh" 
+    cd $DIR || { echo "No se encuentra $DIR"; return; }
 
-    # Definiendo variables para ejecución del panel
-    rm -rf /opt/KINGVPN/.env
-    echo "PORT=$port" > /opt/KINGVPN/.env
-    echo "NODE_ENV=\"production\"" >> /opt/KINGVPN/.env
-    echo "DATABASE_URL=\"file:/opt/KINGVPN/prisma/database.db\"" >> /opt/KINGVPN/.env
-    token1=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
-    token2=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
-    token3=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'));")
-    echo "CSRF_SECRET=\"$token1\"" >> /opt/dtunnelmod/.env
-    echo "JWT_SECRET_KEY=\"$token2\"" >> /opt/dtunnelmod/.env
-    echo "JWT_SECRET_REFRESH=\"$token3\"" >> /opt/dtunnelmod/.env
-    echo "ENCRYPT_FILES=\"7223fd56-e21d-4191-8867-f3c67601122a\"" >> /opt/KINGVPN/.env
+    # Cargar NVM
+    [ -s "/root/.nvm/nvm.sh" ] && \. "/root/.nvm/nvm.sh"
 
+    # Crear .env
+    rm -f "$ENV"
+    echo "PORT=$port" > "$ENV"
+    echo 'NODE_ENV="production"' >> "$ENV"
+    echo "DATABASE_URL=\"file:$DIR/prisma/database.db\"" >> "$ENV"
+
+    token1=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'))")
+    token2=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'))")
+    token3=$(node -e "console.log(require('crypto').randomBytes(100).toString('base64'))")
+
+    echo "CSRF_SECRET=\"$token1\"" >> "$ENV"
+    echo "JWT_SECRET_KEY=\"$token2\"" >> "$ENV"
+    echo "JWT_SECRET_REFRESH=\"$token3\"" >> "$ENV"
+    echo "ENCRYPT_FILES=\"7223fd56-e21d-4191-8867-f3c67601122a\"" >> "$ENV"
+
+    # Build y migraciones
     npm run build
-    npx prisma migrate dev
+    npx prisma migrate deploy
 
+    # Crear servicio systemd
+    SERVICE="/etc/systemd/system/kingvpn.service"
 
-    # Creando servicio del panel
-    local command="/root/.nvm/versions/node/v18.20.4/bin/npm --prefix /opt/KINGVPN/ run start"
-    local service_file_path="/etc/systemd/system/KINGVPN.service"
-    local service_file_content="[Unit]
-Description=KINGVPN
+    cat > "$SERVICE" <<EOF
+[Unit]
+Description=KINGVPN Panel
 After=network.target
 
 [Service]
-LimitNOFILE=infinity
-LimitNPROC=infinity
-LimitMEMLOCK=infinity
-LimitSTACK=infinity
-LimitCORE=infinity
-LimitAS=infinity
-LimitRSS=infinity
-LimitCPU=infinity
-LimitFSIZE=infinity
-
-Environment=NVM_DIR=/root/.nvm
-Environment=PATH=/root/.nvm/versions/node/v18.20.4/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
-Type=simple
-ExecStart=${command}
+WorkingDirectory=$DIR
+ExecStart=/root/.nvm/versions/node/v18.20.4/bin/npm start
 Restart=always
-
-[Service]
-WorkingDirectory=/opt/KINGVPN/
+Environment=NVM_DIR=/root/.nvm
+Environment=PATH=/root/.nvm/versions/node/v18.20.4/bin:/usr/bin:/bin
 
 [Install]
-WantedBy=multi-user.target"
+WantedBy=multi-user.target
+EOF
 
-    echo "$service_file_content" | sudo tee "$service_file_path" > /dev/null
-    sudo systemctl daemon-reload
-    sudo systemctl enable "KINGVPN.service"
-    sudo systemctl start "KINGVPN.service"
+    systemctl daemon-reload
+    systemctl enable kingvpn
+    systemctl restart kingvpn
 
-    # Guardar el puerto en el archivo
-    echo $port >> "$PORT_FILE"
-    echo "Iniciado con exito"
+    echo "$port" > "$PORT_FILE"
+
+    echo "Iniciado con éxito!"
 }
 
-# Funcion para detener el panel
+# Detener panel
 stop_KINGVPN() {
-    sudo systemctl disable "KINGVPN.service"
-    sudo systemctl stop "KINGVPN.service"
-    sudo rm -f "/etc/systemd/system/KINGVPN.service"
-    sudo systemctl daemon-reload
+    systemctl stop kingvpn
+    systemctl disable kingvpn
+    rm -f /etc/systemd/system/kingvpn.service
+    systemctl daemon-reload
 
-    sudo rm -f "$PORT_FILE"
-    echo "Detenido con exito"
+    rm -f "$PORT_FILE"
+    echo "Detenido con éxito!"
 }
 
-# Funcion para Exhibir el menu formateado
 show_menu() {
     clear
     echo "------------------------------------------------"
     printf "|                 %-29s|\n" "KINGVPN"
     echo "------------------------------------------------"
 
-    STATUS=0
-    # Verificar si hay puertos activos
     if [ ! -s "$PORT_FILE" ]; then
-        printf "| acesso: %-37s|\n" "inativo"
+        printf "| Acceso: %-37s|\n" "Desactivado"
+        STATUS=0
     else
         PORT=$(cat $PORT_FILE)
+        printf "| Acceso: %-37s|\n" "http://$(wget -qO- ipinfo.io/ip):$PORT"
         STATUS=1
-        printf "| acesso: %-37s|\n" "http://$(wget -qO- ipinfo.io/ip):$PORT"
     fi
 
     echo "------------------------------------------------"
     if [ "$STATUS" -eq 0 ]; then 
-        printf "| %-45s|\n" "1 - Activar Panel"
+        echo "| 1 - Iniciar Panel                               |"
     else
-        printf "| %-45s|\n" "1 - Detener Panel"
+        echo "| 1 - Detener Panel                               |"
     fi
-    printf "| %-45s|\n" "0 - Volver al menu"
+    echo "| 0 - Salir                                       |"
     echo "------------------------------------------------"
     echo
     read -p " --> Seleccione una opcion: " option
 
     case $option in
         1)
-            if [ "$STATUS" -eq 0 ]; then 
-                read -p "Digite a porta: " port
-                while ! [[ $port =~ ^[0-9]+$ ]]; do
-                    echo "Digite un puerto válido."
-                    read -p "Digite el puerto: " port
-                done
+            if [ "$STATUS" -eq 0 ]; then
+                read -p "Puerto: " port
                 start_KINGVPN $port
-                read -p "> Panel iniciado con exito. Presione cualquier tecla para volver al menu." dummy
+                read -n 1 -s -p "Presione para continuar..."
             else
                 stop_KINGVPN
-                read -p "> Panel desactivado con exito. Presione cualquier tecla para volver al menu." dummy
+                read -n 1 -s -p "Presione para continuar..."
             fi
             ;;
         0)
-            exit 0
-            ;;
+            exit 0 ;;
         *)
-            echo "Opcion invalida. Presione cualquier tecla para volver al menu."
-            read -n 1 dummy
-            ;;
+            echo "Opción inválida"
+            read -n 1 -s ;;
     esac
 }
 
-# Loop del menu
 while true; do
     show_menu
 done
